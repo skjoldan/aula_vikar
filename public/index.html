@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Aula Insights</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="bg-orbit"></div>
+    <header class="site-header">
+      <div>
+        <p class="eyebrow">Aula Insights</p>
+        <h1>Substitute transparency, finally.</h1>
+        <p class="lead">
+          Connect your Aula account and track substitute lessons across subjects,
+          months, and streaks.
+        </p>
+      </div>
+      <div class="status" id="statusCard">
+        <p class="status-title">Session</p>
+        <p class="status-value" id="sessionStatus">Signed out</p>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="panel" id="connectPanel">
+        <h2>MitID login</h2>
+        <form id="connectForm" class="card">
+          <h3>Connect with MitID</h3>
+          <label>
+            MitID user ID
+            <input type="text" name="aulaUsername" required />
+          </label>
+          <button type="submit">Connect account</button>
+          <p class="hint" id="connectHint"></p>
+        </form>
+        <div class="card" id="mitidCard">
+          <h3>MitID approval</h3>
+          <p class="muted" id="mitidStatus">Waiting to start.</p>
+          <div class="qr-grid">
+            <div class="qr-slot" id="qrLeft"></div>
+            <div class="qr-slot" id="qrRight"></div>
+          </div>
+          <p class="small" id="mitidOtp"></p>
+          <button class="ghost" id="resetMitidButton">Reset login session</button>
+        </div>
+        <div class="card">
+          <h3>Sync lessons</h3>
+          <p class="muted">
+            We fetch the last 6 months of lessons and normalize substitute flags.
+          </p>
+          <button id="syncButton">Sync now</button>
+          <p class="hint" id="syncHint"></p>
+        </div>
+      </section>
+
+      <section class="panel" id="dashboardPanel">
+        <div class="panel-header">
+          <h2>Dashboard</h2>
+          <div class="controls">
+            <select id="childSelect"></select>
+            <button class="ghost" id="logoutButton">Log out</button>
+          </div>
+        </div>
+        <div class="metrics" id="metricsCards"></div>
+        <div class="split">
+          <div class="card">
+            <h3>Substitute by subject</h3>
+            <div id="subjectBars" class="bars"></div>
+          </div>
+          <div class="card">
+            <h3>Timeline</h3>
+            <div id="monthBars" class="bars"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Longest substitute streak</h3>
+          <div id="streakInfo" class="streak"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>Built for parents who want clear data on teaching stability.</p>
+      <button class="ghost" id="deleteButton">Delete my data</button>
+      <p class="small" id="deleteHint"></p>
+    </footer>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

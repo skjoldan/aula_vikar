@@ -1,0 +1,20 @@
+services:
+  app:
+    build: .
+    env_file: ./.env
+    environment:
+      AULA_SIDECAR_URL: http://sidecar:5042
+    depends_on:
+      - sidecar
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+
+  sidecar:
+    build:
+      context: .
+      dockerfile: sidecar/Dockerfile
+    env_file: ./.env
+    environment:
+      AULA_SIDECAR_PORT: 5042

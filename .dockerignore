@@ -1,0 +1,5 @@
+data
+node_modules
+sidecar/.venv
+sidecar/__pycache__
+.git
