@@ -1,0 +1,69 @@
+{
+  "services": {
+    "api_call": {
+      "name": "API Call",
+      "description": "Make a custom API call to Aula",
+      "fields": {
+        "uri": {
+          "name": "uri",
+          "description": "URI for the call"
+        },
+        "post_data": {
+          "name": "post_data",
+          "description": "JSON formatted post data, if not defined, request will be GET"
+        }
+      }
+    }
+  },
+  "config": {
+    "error": {
+      "1": "Unknown error",
+      "2": "Unknown error",
+      "auth_failed": "MitID authentication failed",
+      "api_error": "Failed to connect to Aula API"
+    },
+    "abort": {
+      "reauth_successful": "Re-authentication successful!"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "mitid_username": "MitID Username",
+          "schoolschedule": "Enable school schedule calendar",
+          "ugeplan": "Enable weekly plans (ugeplaner)",
+          "mu_opgaver": "Enable assignments from Min Uddannelse"
+        },
+        "description": "Configure your Aula integration with MitID",
+        "title": "Aula MitID Login"
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Aula",
+        "description": "Your Aula session needs to be re-authenticated. Username: {username}\n\nClick Submit to continue with MitID authentication."
+      }
+    }
+  },
+  "options": {
+    "error": {
+      "1": "Unknown error"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "username": "Unilogin username",
+          "password": "Unilogin password"
+        },
+        "description": "Enter your Unilogin credentials",
+        "title": "Authentication & Configuration"
+      },
+      "options": {
+        "data": {
+          "schoolschedule": "School schedules as calendar entities",
+          "ugeplan": "Ugeplaner as sensor attributes",
+          "mu_opgaver": "Assignments from Min Uddannelse as sensor attributes"
+        },
+        "description": "",
+        "title": "Options"
+      }
+    }
+  }
+}

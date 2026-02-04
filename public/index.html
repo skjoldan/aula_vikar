@@ -21,21 +21,21 @@
         </p>
       </div>
       <div class="status" id="statusCard">
-        <p class="status-title">Session</p>
-        <p class="status-value" id="sessionStatus">Signed out</p>
+        <p class="status-title">Aula connection</p>
+        <p class="status-value" id="sessionStatus">Not connected</p>
       </div>
     </header>
 
     <main class="grid">
       <section class="panel" id="connectPanel">
-        <h2>MitID login</h2>
+        <h2>Connect Aula with MitID</h2>
         <form id="connectForm" class="card">
-          <h3>Connect with MitID</h3>
+          <h3>Connect Aula</h3>
           <label>
             MitID user ID
             <input type="text" name="aulaUsername" required />
           </label>
-          <button type="submit">Connect account</button>
+          <button type="submit">Start MitID connection</button>
           <p class="hint" id="connectHint"></p>
         </form>
         <div class="card" id="mitidCard">
@@ -46,9 +46,9 @@
             <div class="qr-slot" id="qrRight"></div>
           </div>
           <p class="small" id="mitidOtp"></p>
-          <button class="ghost" id="resetMitidButton">Reset login session</button>
+          <button class="ghost" id="resetMitidButton">Reset connection</button>
         </div>
-        <div class="card">
+        <div class="card" id="syncCard">
           <h3>Sync lessons</h3>
           <p class="muted">
             We fetch the last 6 months of lessons and normalize substitute flags.
@@ -63,7 +63,7 @@
           <h2>Dashboard</h2>
           <div class="controls">
             <select id="childSelect"></select>
-            <button class="ghost" id="logoutButton">Log out</button>
+            <button class="ghost" id="logoutButton">Disconnect</button>
           </div>
         </div>
         <div class="metrics" id="metricsCards"></div>

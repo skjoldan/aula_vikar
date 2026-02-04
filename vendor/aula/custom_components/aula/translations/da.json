@@ -1,0 +1,69 @@
+{
+  "services": {
+    "api_call": {
+      "name": "API Kald",
+      "description": "Lav et custom API kald til Aula",
+      "fields": {
+        "uri": {
+          "name": "uri",
+          "description": "URI"
+        },
+        "post_data": {
+          "name": "post_data",
+          "description": "Post data i JSON format. Hvis ikke angivet, laver vi et GET request"
+        }
+      }
+    }
+  },
+  "config": {
+    "error": {
+      "1": "Unknown error",
+      "2": "Unknown error",
+      "auth_failed": "MitID godkendelse mislykkedes",
+      "api_error": "Kunne ikke forbinde til Aula API"
+    },
+    "abort": {
+      "reauth_successful": "Genautentificering lykkedes!"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "mitid_username": "MitID Brugernavn",
+          "schoolschedule": "Aktiver skoleskema kalender",
+          "ugeplan": "Aktiver ugeplaner",
+          "mu_opgaver": "Aktiver opgaver fra Min Uddannelse"
+        },
+        "description": "Konfigurer din Aula integration med MitID",
+        "title": "Aula MitID Login"
+      },
+      "reauth_confirm": {
+        "title": "Genautentificer Aula",
+        "description": "Din Aula session skal genautentificeres. Brugernavn: {username}\n\nKlik på Send for at fortsætte med MitID godkendelse."
+      }
+    }
+  },
+  "options": {
+    "error": {
+      "1": "Unknown error"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "username": "Unilogin brugernavn",
+          "password": "Unilogin password"
+        },
+        "description": "Indtast dine Unilogin oplysninger",
+        "title": "Login"
+      },
+      "options": {
+        "data": {
+          "schoolschedule": "Skoleskemaer som kalender entiteter",
+          "ugeplan": "Ugeplaner som sensor attributter",
+          "mu_opgaver": "Opgaver fra Min Uddannelse som sensor attribut"
+        },
+        "description": "",
+        "title": "Login"
+      }
+    }
+  }
+}
