@@ -17,15 +17,34 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const staticDir = path.join(__dirname, "public");
 
 ensureDb();
+{
+  const db = readDb();
+  let changed = false;
+  db.users.forEach((user) => {
+    if (user.aulaCredentials) {
+      delete user.aulaCredentials;
+      user.aulaConnected = false;
+      changed = true;
+    }
+  });
+  if (changed) {
+    writeDb(db);
+  }
+}
 
 app.use(express.json({ limit: "1mb" }));
 app.use(express.static(staticDir));
 
 const pendingConnections = new Map();
 
-function requireAuth(req, res, next) {
+function getTokenFromRequest(req) {
   const auth = req.headers.authorization || "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+  const bearer = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+  return bearer || null;
+}
+
+function requireAuth(req, res, next) {
+  const token = getTokenFromRequest(req);
   if (!token) return res.status(401).json({ error: "Missing token" });
   const db = readDb();
   const session = db.sessions.find(
@@ -40,8 +59,7 @@ function requireAuth(req, res, next) {
 }
 
 function getUserFromAuth(req, db) {
-  const auth = req.headers.authorization || "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+  const token = getTokenFromRequest(req);
   if (!token) return null;
   const session = db.sessions.find(
     (entry) => entry.token === token && entry.expiresAt > Date.now()
@@ -51,11 +69,24 @@ function getUserFromAuth(req, db) {
 }
 
 function sanitizeUser(user) {
+  const hasValidSession = isAulaSessionValid(user);
   return {
     id: user.id,
     mitidUsername: user.mitidUsername,
+    aulaConnected: Boolean(user.aulaConnected) && hasValidSession,
     createdAt: user.createdAt,
   };
+}
+
+function isAulaSessionValid(user) {
+  if (!user?.aulaSession) return false;
+  try {
+    const session = JSON.parse(decryptSecret(user.aulaSession));
+    const expiresAt = Number(session.sessionExpiresAt || 0);
+    return Boolean(session.sessionKey) && Date.now() < expiresAt;
+  } catch (error) {
+    return false;
+  }
 }
 
 function createSession(db, userId) {
@@ -74,38 +105,40 @@ app.get("/api/session", requireAuth, (req, res) => {
 });
 
 app.post("/api/aula/connect", async (req, res) => {
-  const { aulaUsername, aulaPassword } = req.body || {};
+  const { aulaUsername } = req.body || {};
   if (!aulaUsername) {
     return res.status(400).json({ error: "MitID user ID required" });
   }
   const db = readDb();
-  const encrypted = encryptSecret(
-    JSON.stringify({ aulaUsername, aulaPassword })
-  );
   try {
-    const profile = await fetchAulaProfile({ aulaUsername, aulaPassword });
+    const profile = await fetchAulaProfile({ aulaUsername });
     if (profile.status && profile.status !== "ready") {
       const connectToken = randomToken(12);
       pendingConnections.set(connectToken, {
         aulaUsername,
-        aulaPassword,
-        encrypted,
         createdAt: Date.now(),
       });
       return res.json({ ...profile, connectToken });
     }
     const children = profile.children || [];
+    const sessionKey = profile.sessionKey || null;
+    const sessionExpiresAt = profile.sessionExpiresAt || null;
+    const aulaSession = sessionKey
+      ? encryptSecret(JSON.stringify({ sessionKey, sessionExpiresAt }))
+      : null;
     let user = db.users.find((entry) => entry.mitidUsername === aulaUsername);
     if (!user) {
       user = {
         id: randomToken(12),
         mitidUsername: aulaUsername,
         createdAt: new Date().toISOString(),
-        aulaCredentials: encrypted,
+        aulaSession,
+        aulaConnected: Boolean(sessionKey),
       };
       db.users.push(user);
     } else {
-      user.aulaCredentials = encrypted;
+      user.aulaSession = aulaSession;
+      user.aulaConnected = Boolean(sessionKey);
     }
     db.children = db.children.filter((child) => child.userId !== user.id);
     children.forEach((child) => {
@@ -127,12 +160,9 @@ app.post("/api/aula/status", async (req, res) => {
     pending = pendingConnections.get(connectToken);
   } else {
     const user = getUserFromAuth(req, db);
-    if (user?.aulaCredentials) {
-      const credentials = JSON.parse(decryptSecret(user.aulaCredentials));
+    if (user?.aulaSession) {
       pending = {
-        aulaUsername: credentials.aulaUsername,
-        aulaPassword: credentials.aulaPassword,
-        encrypted: user.aulaCredentials,
+        aulaUsername: user.mitidUsername,
       };
     }
   }
@@ -142,19 +172,22 @@ app.post("/api/aula/status", async (req, res) => {
   try {
     const status = await fetchAulaAuthStatus({
       aulaUsername: pending.aulaUsername,
-      aulaPassword: pending.aulaPassword,
     });
     if (status.status && status.status !== "ready") {
       return res.json(status);
     }
     const profile = await fetchAulaProfile({
       aulaUsername: pending.aulaUsername,
-      aulaPassword: pending.aulaPassword,
     });
     if (profile.status && profile.status !== "ready") {
       return res.json(profile);
     }
     const children = profile.children || [];
+    const sessionKey = profile.sessionKey || null;
+    const sessionExpiresAt = profile.sessionExpiresAt || null;
+    const aulaSession = sessionKey
+      ? encryptSecret(JSON.stringify({ sessionKey, sessionExpiresAt }))
+      : null;
     let user = db.users.find(
       (entry) => entry.mitidUsername === pending.aulaUsername
     );
@@ -163,11 +196,13 @@ app.post("/api/aula/status", async (req, res) => {
         id: randomToken(12),
         mitidUsername: pending.aulaUsername,
         createdAt: new Date().toISOString(),
-        aulaCredentials: pending.encrypted,
+        aulaSession,
+        aulaConnected: Boolean(sessionKey),
       };
       db.users.push(user);
     } else {
-      user.aulaCredentials = pending.encrypted;
+      user.aulaSession = aulaSession;
+      user.aulaConnected = Boolean(sessionKey);
     }
     db.children = db.children.filter((child) => child.userId !== user.id);
     children.forEach((child) => {
@@ -197,12 +232,9 @@ app.post("/api/aula/reset", async (req, res) => {
     pending = pendingConnections.get(connectToken);
   } else {
     const user = getUserFromAuth(req, db);
-    if (user?.aulaCredentials) {
-      const credentials = JSON.parse(decryptSecret(user.aulaCredentials));
+    if (user?.mitidUsername) {
       pending = {
-        aulaUsername: credentials.aulaUsername,
-        aulaPassword: credentials.aulaPassword,
-        encrypted: user.aulaCredentials,
+        aulaUsername: user.mitidUsername,
       };
     }
   }
@@ -212,7 +244,6 @@ app.post("/api/aula/reset", async (req, res) => {
   try {
     const response = await fetchAulaAuthReset({
       aulaUsername: pending.aulaUsername,
-      aulaPassword: pending.aulaPassword,
     });
     if (connectToken) {
       pendingConnections.delete(connectToken);
@@ -233,14 +264,22 @@ app.post("/api/aula/sync", requireAuth, async (req, res) => {
   const { months = 6 } = req.body || {};
   const db = readDb();
   const user = db.users.find((entry) => entry.id === req.user.id);
-  if (!user?.aulaCredentials) {
-    return res.status(400).json({ error: "Aula not connected" });
+  if (!user?.aulaConnected || !user?.aulaSession) {
+    return res.status(400).json({
+      error: "Aula not connected. Please connect Aula with MitID.",
+    });
   }
-  const credentials = JSON.parse(decryptSecret(user.aulaCredentials));
+  if (!isAulaSessionValid(user)) {
+    return res.status(401).json({
+      error: "Aula session expired. Please connect Aula with MitID again.",
+    });
+  }
+  const aulaSession = JSON.parse(decryptSecret(user.aulaSession));
+  const sessionKey = aulaSession.sessionKey;
   const children = db.children.filter((child) => child.userId === user.id);
   try {
     const lessonPayload = await fetchAulaLessons({
-      credentials,
+      session: { sessionKey },
       months,
       children,
     });

@@ -19,9 +19,13 @@ def get_payload():
 
 
 def normalize_auth(payload):
+    session_key = payload.get("session_key") or payload.get("sessionKey")
     return {
+        "session_key": session_key,
         "mitid_username": payload.get("mitid_username") or payload.get("aulaUsername"),
-        "mitid_password": payload.get("mitid_password") or payload.get("aulaPassword"),
+        "mitid_password": payload.get("mitid_password")
+        or payload.get("aulaPassword")
+        or "",
         "auth_method": payload.get("auth_method") or payload.get("authMethod") or "APP",
         "mitid_identity": int(payload.get("mitid_identity") or payload.get("mitidIdentity") or 1),
     }
@@ -36,17 +40,29 @@ def health():
 def profile():
     payload = get_payload()
     auth = normalize_auth(payload)
-    if not auth["mitid_username"]:
+    if not auth["session_key"] and not auth["mitid_username"]:
         return jsonify({"error": "mitid_username required"}), 400
     try:
-        status = service.ensure_session(**auth)
+        if auth["session_key"]:
+            status = service.ensure_session_by_handle(auth["session_key"])
+        else:
+            status = service.ensure_session(**auth)
         if status["status"] != "ready":
             return jsonify(status)
         profile_response = service.get_profiles(status["session"])
         children = extract_children(
             profile_response, debug=service._debug, debug_level=service._debug_level
         )
-        return jsonify({"status": "ready", "children": children})
+        session_handle = status.get("session_handle")
+        session_expires_at = status.get("session_expires_at")
+        return jsonify(
+            {
+                "status": "ready",
+                "children": children,
+                "sessionKey": session_handle,
+                "sessionExpiresAt": session_expires_at,
+            }
+        )
     except AulaServiceError as error:
         return jsonify({"error": str(error)}), 400
 
@@ -55,10 +71,13 @@ def profile():
 def lessons():
     payload = get_payload()
     auth = normalize_auth(payload)
-    if not auth["mitid_username"]:
+    if not auth["session_key"] and not auth["mitid_username"]:
         return jsonify({"error": "mitid_username required"}), 400
     try:
-        status = service.ensure_session(**auth)
+        if auth["session_key"]:
+            status = service.ensure_session_by_handle(auth["session_key"])
+        else:
+            status = service.ensure_session(**auth)
         if status["status"] != "ready":
             return jsonify(status)
         profile_response = service.get_profiles(status["session"])

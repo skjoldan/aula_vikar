@@ -47,8 +47,12 @@ async function apiFetch(path, options = {}) {
   return payload;
 }
 
-function updateSessionStatus(userEmail) {
-  elements.sessionStatus.textContent = userEmail || "Signed out";
+function updateSessionStatus(userLabel, isConnected = false) {
+  if (!isConnected) {
+    elements.sessionStatus.textContent = "Not connected";
+    return;
+  }
+  elements.sessionStatus.textContent = userLabel || "Connected";
 }
 
 function renderChildSelector(children) {
@@ -175,7 +179,10 @@ async function pollMitidStatus() {
       state.connectToken = null;
       state.token = payload.token;
       localStorage.setItem("aula_token", payload.token);
-      updateSessionStatus(payload.user?.mitidUsername || "Signed in");
+      updateSessionStatus(
+        payload.user?.mitidUsername || "Connected",
+        payload.user?.aulaConnected
+      );
       await refreshChildren();
       await refreshMetrics();
       setHint(elements.connectHint, "Connected. Ready to sync.");
@@ -191,6 +198,7 @@ async function pollMitidStatus() {
     setHint(elements.connectHint, error.message, true);
   }
 }
+
 async function refreshMetrics() {
   const childId = elements.childSelect.value || "";
   const query = childId ? `?childId=${encodeURIComponent(childId)}` : "";
@@ -208,13 +216,15 @@ elements.connectForm.addEventListener("submit", async (event) => {
       method: "POST",
       body: JSON.stringify({
         aulaUsername: formData.get("aulaUsername"),
-        aulaPassword: formData.get("aulaPassword"),
       }),
     });
     if (payload.status === "ready") {
       state.token = payload.token;
       localStorage.setItem("aula_token", payload.token);
-      updateSessionStatus(payload.user?.mitidUsername || "Signed in");
+      updateSessionStatus(
+        payload.user?.mitidUsername || "Connected",
+        payload.user?.aulaConnected
+      );
       state.children = payload.children || [];
       renderChildSelector(state.children);
       setHint(elements.connectHint, "Connected. Ready to sync.");
@@ -223,7 +233,7 @@ elements.connectForm.addEventListener("submit", async (event) => {
     }
     if (payload.status === "pending") {
       renderMitidStatus(payload);
-      setHint(elements.connectHint, "Approve MitID login.");
+      setHint(elements.connectHint, "Approve MitID in the official app.");
       stopMitidPolling();
       state.connectToken = payload.connectToken;
       mitidPollTimer = setInterval(pollMitidStatus, 3000);
@@ -242,13 +252,6 @@ elements.syncButton.addEventListener("click", async () => {
       method: "POST",
       body: JSON.stringify({ months: 6 }),
     });
-    if (payload.status && payload.status !== "ready") {
-      renderMitidStatus(payload);
-      setHint(elements.syncHint, "Approve MitID login first.");
-      stopMitidPolling();
-      mitidPollTimer = setInterval(pollMitidStatus, 3000);
-      return;
-    }
     setHint(elements.syncHint, "Sync complete.");
     await refreshMetrics();
   } catch (error) {
@@ -265,7 +268,7 @@ elements.logoutButton.addEventListener("click", () => {
   state.connectToken = null;
   localStorage.removeItem("aula_token");
   updateSessionStatus();
-  setHint(elements.connectHint, "Signed out.");
+  setHint(elements.connectHint, "Disconnected.");
 });
 
 elements.deleteButton.addEventListener("click", async () => {
@@ -304,7 +307,10 @@ async function bootstrap() {
   if (!state.token) return;
   try {
     const payload = await apiFetch("/api/session");
-    updateSessionStatus(payload.user.mitidUsername);
+    updateSessionStatus(
+      payload.user.mitidUsername || "Connected",
+      payload.user.aulaConnected
+    );
     await refreshChildren();
     await refreshMetrics();
   } catch (error) {

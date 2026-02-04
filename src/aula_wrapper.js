@@ -54,7 +54,12 @@ function stubLessons({ months = 6, children }) {
   return lessons;
 }
 
-function buildAuthPayload({ aulaUsername, aulaPassword }) {
+function buildAuthPayload({ aulaUsername, aulaPassword, sessionKey }) {
+  if (sessionKey) {
+    return {
+      session_key: sessionKey,
+    };
+  }
   return {
     mitid_username: aulaUsername,
     mitid_password: aulaPassword,
@@ -72,10 +77,10 @@ export async function fetchAulaProfile({ aulaUsername, aulaPassword }) {
   return payload;
 }
 
-export async function fetchAulaLessons({ months = 6, children, credentials }) {
+export async function fetchAulaLessons({ months = 6, children, session }) {
   if (USE_STUB) return stubLessons({ months, children });
   const payload = await postJson("/api/lessons", {
-    ...buildAuthPayload(credentials),
+    ...buildAuthPayload(session),
     months,
     childIds: children.map((child) => child.id),
   });

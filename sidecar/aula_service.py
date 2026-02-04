@@ -5,6 +5,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+import secrets
 
 import requests
 
@@ -33,6 +34,7 @@ class AulaServiceError(Exception):
 class AulaService:
     def __init__(self):
         self._sessions = {}
+        self._session_handles = {}
         self._auth_jobs = {}
         self._debug = bool(os.environ.get("AULA_DEBUG"))
         self._debug_level = os.environ.get("AULA_DEBUG_LEVEL", "info").lower()
@@ -60,7 +62,7 @@ class AulaService:
         if cached and cached.get("tokens"):
             client = cached["client"]
             if self._tokens_valid(client) or self._refresh_tokens(client):
-                return {"status": "ready", "session": cached}
+                return self._ready_payload(cached)
 
         job = self._auth_jobs.get(cache_key)
         if job and job["done"]:
@@ -79,7 +81,7 @@ class AulaService:
                 }
                 self._sessions[cache_key] = session_data
                 self._auth_jobs.pop(cache_key, None)
-                return {"status": "ready", "session": session_data}
+                return self._ready_payload(session_data)
         if job and not job["done"]:
             return self._job_status(job)
 
@@ -87,6 +89,16 @@ class AulaService:
             cache_key, mitid_username, mitid_password, auth_method, mitid_identity
         )
         return self._job_status(new_job)
+
+    def ensure_session_by_handle(self, session_handle):
+        session_data = self._session_handles.get(session_handle)
+        if not session_data:
+            return {"status": "error", "error": "Session not found"}
+        client = session_data["client"]
+        if self._tokens_valid(client) or self._refresh_tokens(client):
+            return self._ready_payload(session_data)
+        self._session_handles.pop(session_handle, None)
+        return {"status": "error", "error": "Session expired"}
 
     def _start_auth_job(self, cache_key, mitid_username, mitid_password, auth_method, mitid_identity):
         client = AulaLoginClient(
@@ -159,6 +171,7 @@ class AulaService:
         try:
             if client.renew_access_token():
                 self._apply_access_token(client, client.tokens)
+                self._update_session_expiry(client.tokens)
                 return True
         except Exception:
             return False
@@ -183,6 +196,49 @@ class AulaService:
             "profiles.getProfileContext",
             {"portalrole": "guardian", "access_token": access_token},
         )
+
+    def _ready_payload(self, session_data):
+        session_handle = session_data.get("session_handle")
+        if not session_handle:
+            session_handle = self._create_session_handle(session_data)
+        return {
+            "status": "ready",
+            "session": session_data,
+            "session_handle": session_handle,
+            "session_expires_at": session_data.get("session_expires_at"),
+        }
+
+    def _create_session_handle(self, session_data):
+        session_handle = secrets.token_urlsafe(24)
+        session_data["session_handle"] = session_handle
+        if not session_data.get("session_expires_at"):
+            session_data["session_expires_at"] = self._compute_expires_at(
+                session_data.get("tokens")
+            )
+        self._session_handles[session_handle] = session_data
+        return session_handle
+
+    def _update_session_expiry(self, tokens):
+        expires_at = self._compute_expires_at(tokens)
+        if not expires_at:
+            return
+        for session_data in self._session_handles.values():
+            if session_data.get("tokens") == tokens:
+                session_data["session_expires_at"] = expires_at
+
+    def _compute_expires_at(self, tokens):
+        if not tokens:
+            return None
+        now_ms = int(time.time() * 1000)
+        expires_at = tokens.get("expires_at")
+        if expires_at:
+            if expires_at > 10_000_000_000:
+                return int(expires_at)
+            return int(expires_at * 1000)
+        expires_in = tokens.get("expires_in")
+        if expires_in:
+            return now_ms + int(expires_in) * 1000
+        return now_ms + 50 * 60 * 1000
 
     def _discover_api_base(self, session, access_token):
         for offset in range(MAX_API_BUMP + 1):
