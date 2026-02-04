@@ -105,7 +105,6 @@ class AulaService:
             "started_at": time.time(),
             "last_status": "starting",
         }
-
         def run():
             try:
                 job["last_status"] = "authenticating"
@@ -127,22 +126,36 @@ class AulaService:
 
     def _job_status(self, job):
         client = job["client"]
-        qr_svg = None
+
         status_message = None
         otp_code = None
+        qr_svgs = None
+
         mitid_client = client.get_mitid_client()
         if mitid_client:
             status_message = getattr(mitid_client, "status_message", None)
             otp_code = getattr(mitid_client, "otp_code", None)
-            qr_svg = client.get_qr_codes_svg()
+
+            # vendor client returns either None or a tuple/list of two SVG strings
+            try:
+                qr = client.get_qr_codes_svg()
+                if qr and isinstance(qr, (tuple, list)) and len(qr) >= 2:
+                    qr_svgs = [qr[0], qr[1]]
+                elif isinstance(qr, str):
+                    qr_svgs = [qr]
+            except Exception:
+                qr_svgs = None
+
         return {
             "status": "pending",
             "message": status_message or job.get("last_status") or "Pending",
             "otpCode": otp_code,
-            "qrSvg": qr_svg,
+            "qrSvgs": qr_svgs,
+            "qrSvg": (qr_svgs[0] if qr_svgs else None),
         }
 
     def reset_session(self, mitid_username, auth_method, mitid_identity):
+
         cache_key = f"{mitid_username}:{auth_method}:{mitid_identity or 1}"
         self._sessions.pop(cache_key, None)
         self._auth_jobs.pop(cache_key, None)

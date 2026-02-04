@@ -135,8 +135,11 @@ function stopMitidPolling() {
   }
 }
 
+
+
 function renderMitidStatus(payload) {
   if (!payload) return;
+
   if (payload.status === "ready") {
     elements.mitidStatus.textContent = "MitID approved.";
     elements.mitidOtp.textContent = "";
@@ -144,19 +147,37 @@ function renderMitidStatus(payload) {
     elements.qrRight.innerHTML = "";
     return;
   }
+
   elements.mitidStatus.textContent =
     payload.message || "Waiting for MitID approval...";
+
   if (payload.otpCode) {
     elements.mitidOtp.textContent = `OTP code: ${payload.otpCode}`;
   } else {
     elements.mitidOtp.textContent = "";
   }
-  if (payload.qrSvg && payload.qrSvg.length >= 1) {
-    const frame = payload.qrSvg[qrFrame % payload.qrSvg.length];
+
+  // QR rendering (prefer animated frames if available)
+  const frames =
+    (Array.isArray(payload.qrSvgs) && payload.qrSvgs.filter(Boolean)) || null;
+
+  if (frames && frames.length) {
+    const frame = frames[qrFrame % frames.length];
     elements.qrLeft.innerHTML = frame || "";
     elements.qrRight.innerHTML = "";
     qrFrame += 1;
+    return;
   }
+
+  if (payload.qrSvg) {
+    elements.qrLeft.innerHTML = payload.qrSvg;
+    elements.qrRight.innerHTML = "";
+    return;
+  }
+
+  // No QR yet
+  elements.qrLeft.innerHTML = "";
+  elements.qrRight.innerHTML = "";
 }
 
 async function pollMitidStatus() {
