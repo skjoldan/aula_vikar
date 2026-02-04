@@ -42,10 +42,10 @@ def health():
 def profile():
     payload = get_payload()
     auth = normalize_auth(payload)
-    if not auth["session_key"] and not auth["mitid_username"]:
+    if not auth.get("session_key") and not auth.get("mitid_username"):
         return jsonify({"error": "mitid_username required"}), 400
     try:
-        if auth["session_key"]:
+        if auth.get("session_key"):
             status = service.ensure_session_by_handle(auth["session_key"])
         else:
             status = service.ensure_session(**auth)
@@ -73,10 +73,10 @@ def profile():
 def lessons():
     payload = get_payload()
     auth = normalize_auth(payload)
-    if not auth["session_key"] and not auth["mitid_username"]:
+    if not auth.get("session_key") and not auth.get("mitid_username"):
         return jsonify({"error": "mitid_username required"}), 400
     try:
-        if auth["session_key"]:
+        if auth.get("session_key"):
             status = service.ensure_session_by_handle(auth["session_key"])
         else:
             status = service.ensure_session(**auth)
