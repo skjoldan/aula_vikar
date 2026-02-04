@@ -20,8 +20,7 @@ def get_payload():
 
 def normalize_auth(payload):
     session_key = payload.get("session_key") or payload.get("sessionKey")
-    return {
-        "session_key": session_key,
+    auth = {
         "mitid_username": payload.get("mitid_username") or payload.get("aulaUsername"),
         "mitid_password": payload.get("mitid_password")
         or payload.get("aulaPassword")
@@ -29,6 +28,9 @@ def normalize_auth(payload):
         "auth_method": payload.get("auth_method") or payload.get("authMethod") or "APP",
         "mitid_identity": int(payload.get("mitid_identity") or payload.get("mitidIdentity") or 1),
     }
+    if session_key:
+        auth["session_key"] = session_key
+    return auth
 
 
 @app.route("/health", methods=["GET"])
@@ -108,10 +110,13 @@ def lessons():
 def auth_status():
     payload = get_payload()
     auth = normalize_auth(payload)
-    if not auth["mitid_username"]:
+    if not auth.get("mitid_username"):
         return jsonify({"error": "mitid_username required"}), 400
     try:
-        status = service.ensure_session(**auth)
+        if auth.get("session_key"):
+            status = service.ensure_session_by_handle(auth["session_key"])
+        else:
+            status = service.ensure_session(**auth)
         if status["status"] == "ready":
             return jsonify({"status": "ready"})
         return jsonify(status)
