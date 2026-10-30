@@ -1,0 +1,105 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Aula Insights</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="bg-orbit"></div>
+    <header class="site-header">
+      <div>
+        <p class="eyebrow">Aula Insights</p>
+        <h1>Substitute transparency, finally.</h1>
+        <p class="lead">
+          Connect your Aula account and track substitute lessons across subjects,
+          months, and streaks.
+        </p>
+      </div>
+      <div class="status" id="statusCard">
+        <p class="status-title">Session</p>
+        <p class="status-value" id="sessionStatus">Signed out</p>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="panel" id="connectPanel">
+        <h2>Connect Aula</h2>
+        <div class="card" id="loginCard">
+          <h3>Login with Aula</h3>
+          <div style="display:flex;gap:1.5rem;margin:.5rem 0 1rem">
+            <label>
+              <input type="radio" name="level" value="3" checked />
+              MitID
+            </label>
+            <label>
+              <input type="radio" name="level" value="2" />
+              UniLogin
+            </label>
+          </div>
+          <button id="startLoginButton">Open Aula Login</button>
+          <p class="hint" id="loginHint"></p>
+          <div id="callbackSection" style="display:none;margin-top:1rem">
+            <ol class="muted" style="padding-left:1.2rem;margin:.5rem 0 1rem;line-height:1.8">
+              <li>Log in in the new tab that opened.</li>
+              <li>After you approve, Aula may show a page with a <strong>Fortsæt login</strong> button. Leave it open; you do not need to press that button.</li>
+              <li>Copy the full address from that tab, including everything after <code>?</code>. An <code>app-redirect.aula.dk</code> URL containing <code>returnUri=</code> works, as does the earlier <code>app-private.aula.dk</code> URL. Keep it private.</li>
+              <li>Paste it below and click Complete.</li>
+            </ol>
+            <input
+              type="text"
+              id="callbackUrl"
+              placeholder="Paste the full Aula redirect URL (app-redirect or app-private)"
+              style="width:100%;margin:.5rem 0"
+            />
+            <button id="completeLoginButton">Complete Login</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Sync lessons</h3>
+          <p class="muted">
+            We fetch the last 6 months of lessons and normalize substitute flags.
+          </p>
+          <button id="syncButton">Sync now</button>
+          <p class="hint" id="syncHint"></p>
+        </div>
+      </section>
+
+      <section class="panel" id="dashboardPanel">
+        <div class="panel-header">
+          <h2>Dashboard</h2>
+          <div class="controls">
+            <select id="childSelect"></select>
+            <button class="ghost" id="logoutButton">Log out</button>
+          </div>
+        </div>
+        <div class="metrics" id="metricsCards"></div>
+        <div class="split">
+          <div class="card">
+            <h3>Substitute by subject</h3>
+            <div id="subjectBars" class="bars"></div>
+          </div>
+          <div class="card">
+            <h3>Timeline</h3>
+            <div id="monthBars" class="bars"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Longest substitute streak</h3>
+          <div id="streakInfo" class="streak"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>Built for parents who want clear data on teaching stability.</p>
+    </footer>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

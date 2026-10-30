@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.*
+!.env.example
+artifacts/
+data/
+.claude/
+AGENTS.md
+CLAUDE.md
+*.workbench-backup-*
+*.log

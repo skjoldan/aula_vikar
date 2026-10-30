@@ -1,0 +1,11 @@
+data
+node_modules
+.git
+.env
+artifacts
+.env.*
+!.env.example
+.claude
+AGENTS.md
+CLAUDE.md
+*.workbench-backup-*
